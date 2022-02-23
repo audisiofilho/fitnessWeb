@@ -3,44 +3,35 @@ import "./dashboard.css";
 
 import Header from "../../components/Header";
 import Title from "../../components/Title";
-import Modal from "../../components/Modal";
-import { FiEdit2, FiMessageSquare, FiPlus, FiSearch } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiSearch } from "react-icons/fi";
+import { FaRunning } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
 
 import firebase from "../../services/firebaseConnection";
+import { toast } from "react-toastify";
 
-const listRef = firebase
-  .firestore()
-  .collection("chamados")
-  .orderBy("created", "desc");
+const listRef = firebase.firestore().collection(" exercises");
 
 export default function Dashboard() {
-  const [chamados, setChamados] = useState([]);
+  const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [isEmpty, setIsEmpty] = useState(false);
-  const [lastDocs, setLastDocs] = useState();
-  const [showPostModal, setShowPostModal] = useState(false);
-  const [detail, setDetail] = useState();
 
   useEffect(() => {
-    async function loadChamados() {
+    async function loadExercices() {
       await listRef
-        .limit(5)
         .get()
         .then((snapshot) => {
           updateState(snapshot);
         })
         .catch((err) => {
           console.log(err);
-          setLoadingMore(false);
         });
 
       setLoading(false);
     }
 
-    loadChamados();
+    loadExercices();
 
     return () => {};
   }, []);
@@ -54,37 +45,16 @@ export default function Dashboard() {
       snapshot.forEach((doc) => {
         lista.push({
           id: doc.id,
-          assunto: doc.data().assunto,
-          cliente: doc.data().cliente,
-          clienteId: doc.data().clienteId,
-          created: doc.data().created,
-          createdFormated: format(doc.data().created.toDate(), "dd/MM/yyyy"),
-          status: doc.data().status,
-          complemento: doc.data().complemento,
+          name: doc.data().name,
+          image: doc.data().image,
+          series: doc.data().series,
         });
       });
 
-      const lastDoc = snapshot.docs[snapshot.docs.length - 1];
-
-      setChamados((chamados) => [...chamados, ...lista]);
-      setLastDocs(lastDoc);
+      setExercises((exercises) => [...exercises, ...lista]);
     } else {
       setIsEmpty(true);
     }
-
-    setLoadingMore(false);
-  }
-
-  async function handleMore() {
-    setLoadingMore(true);
-
-    await listRef
-      .startAfter(lastDocs)
-      .limit(5)
-      .get()
-      .then((snapshot) => {
-        updateState(snapshot);
-      });
   }
 
   if (loading) {
@@ -92,78 +62,79 @@ export default function Dashboard() {
       <div>
         <Header />
         <div className="content">
-          <Title name="Atendimento">
-            <FiMessageSquare size={25} />
+          <Title name="Exercicios">
+            <FaRunning size={25} />
           </Title>
 
           <div className="container dashboard">
-            <span>Buscando chamados...</span>
+            <span>Buscando exercicios...</span>
           </div>
         </div>
       </div>
     );
   }
 
-  function togglePostModal(item) {
-    setShowPostModal(!showPostModal);
-    setDetail(item);
+  async function handleDelete(item) {
+    await listRef
+      .doc(item.id)
+      .delete()
+      .then(() => {
+        window.location.reload();
+      })
+      .catch((err) => {
+        toast.error("algo deu errado");
+      });
   }
 
   return (
     <div>
       <Header />
       <div className="content">
-        <Title name="Atendimento">
-          <FiMessageSquare size={25} />
+        <Title name="Exercicios">
+          <FaRunning size={25} />
         </Title>
 
-        {chamados.length === 0 ? (
+        {exercises.length === 0 ? (
           <div className="container dashboard">
-            <span>Nenhum chamado registrado...</span>
+            <span>Nenhum Exercicio registrado...</span>
             <Link to="/new" className="new">
               <FiPlus size={25} color="#fff" />
-              Novo Chamado
+              Novo Exercicio
             </Link>
           </div>
         ) : (
           <>
             <Link to="/new" className="new">
               <FiPlus size={25} color="#fff" />
-              Novo Chamado
+              Novo Exercicio
             </Link>
             <table>
               <thead>
                 <tr>
-                  <th scope="col">Cliente</th>
-                  <th scope="col">Assunto</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Cadastrado em</th>
+                  <th scope="col">Nome</th>
+                  <th scope="col">Series</th>
+                  <th scope="col">Imagem</th>
                   <th scope="col">#</th>
                 </tr>
               </thead>
               <tbody>
-                {chamados.map((item, index) => {
+                {exercises.map((item, index) => {
                   return (
                     <tr key={index}>
-                      <td data-label="Cliente">{item.cliente}</td>
-                      <td data-label="Assunto">{item.assunto}</td>
-                      <td data-label="Status">
-                        <span
-                          className="badge"
-                          style={{
-                            backgroundColor:
-                              item.status === "Aberto" ? "#5cb85c" : "#999",
-                          }}
-                        >
-                          {item.status}
-                        </span>
+                      <td data-label="Nome">{item.name}</td>
+                      <td data-label="Series">{item.series}</td>
+                      <td data-label="Imagem">
+                        <img
+                          src={item.image}
+                          alt="img exercicio"
+                          sizes="45x45"
+                        />
                       </td>
-                      <td data-label="Cadastrado">{item.createdFormated}</td>
                       <td data-label="#">
                         <button
                           className="action"
-                          style={{ backgroundColor: "#3583f6" }}
-                          onClick={() => togglePostModal(item)}
+                          style={{ backgroundColor: "red" }}
+                          onClick={() => handleDelete(item)}
                         >
                           <FiSearch color="#fff" size={17} />
                         </button>
@@ -180,25 +151,9 @@ export default function Dashboard() {
                 })}
               </tbody>
             </table>
-            {loadingMore && (
-              <h3 style={{ textAlign: "center", marginTop: 15 }}>
-                Buscando mais dados...
-              </h3>
-            )}
-            {!loadingMore && !isEmpty && (
-              <button className="btn-more" onClick={handleMore}>
-                Buscar mais
-              </button>
-            )}
           </>
         )}
       </div>
-      {showPostModal && (
-        <Modal
-          conteudo={detail}
-          close={togglePostModal}
-        />
-      )}
     </div>
   );
 }
