@@ -1,7 +1,5 @@
 import { useState, createContext, useEffect } from "react";
-import { toast } from 'react-toastify'
-
-import firebase from "../services/firebaseConnection";
+import { toast } from "react-toastify";
 
 export const AuthContext = createContext({});
 
@@ -25,43 +23,6 @@ function AuthProvider({ children }) {
     loadStorage();
   }, []);
 
-  //fazer cadastro
-  async function signUp(email, password, nome) {
-    setLoadingAuth(true);
-    await firebase
-      .auth()
-      .createUserWithEmailAndPassword(email, password)
-      .then(async (value) => {
-        let uid = value.user.uid;
-
-        await firebase
-          .firestore()
-          .collection("users")
-          .doc(uid)
-          .set({
-            nome: nome,
-            avatarUrl: null,
-          })
-          .then(() => {
-            let data = {
-              uid: uid,
-              nome: nome,
-              email: value.user.email,
-              avatarUrl: null,
-            };
-            setUser(data);
-            storageUser(data);
-            setLoadingAuth(false);
-            toast.success('Bem vindo a plataforma!');
-          });
-      })
-      .catch((error) => {
-        console.log(error);
-        toast.error('Ops! Algo deu errado!')
-        setLoadingAuth(false);
-      });
-  }
-
   function storageUser(data) {
     localStorage.setItem("SistemaUser", JSON.stringify(data));
   }
@@ -70,40 +31,26 @@ function AuthProvider({ children }) {
   async function signIn(email, password) {
     setLoadingAuth(true);
 
-    await firebase
-      .auth()
-      .signInWithEmailAndPassword(email, password)
-      .then(async (value) => {
-        let uid = value.user.uid;
+    if (email === "adm" && password === "123") {
+      let data = {
+        uid: 1,
+        nome: "ADM",
+        avatarUrl: null,
+        email: "adm@adm.com",
+      };
 
-        const userProfile = await firebase
-          .firestore()
-          .collection("users")
-          .doc(uid)
-          .get();
-
-        let data = {
-          uid: uid,
-          nome: userProfile.data().nome,
-          avatarUrl: userProfile.data().avatarUrl,
-          email: value.user.email,
-        };
-
-        setUser(data);
-        storageUser(data);
-        setLoadingAuth(false);
-        toast.success('Bem vindo de volta!');
-      })
-      .catch((error) => {
-        console.log(error);
-        toast.error('Ops! Algo deu errado!')
-        setLoadingAuth(false);
-      });
+      setUser(data);
+      storageUser(data);
+      setLoadingAuth(false);
+      toast.success("Bem vindo de volta!");
+    } else {
+      toast.error("Ops! Algo deu errado!");
+      setLoadingAuth(false);
+    }
   }
 
   //fazer logout
   async function signOut() {
-    await firebase.auth().signOut();
     localStorage.removeItem("SistemaUser");
     setUser(null);
   }
@@ -114,12 +61,11 @@ function AuthProvider({ children }) {
         signed: !!user,
         user,
         loading,
-        signUp,
         signIn,
         signOut,
         loadingAuth,
         setUser,
-        storageUser
+        storageUser,
       }}
     >
       {children}

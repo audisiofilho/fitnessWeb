@@ -1,5 +1,4 @@
 import "./signin.css";
-import { Link } from "react-router-dom";
 import { useState, useContext } from "react";
 import { AuthContext } from "../../contexts/auth";
 import logo from "../../assets/logo.png";
@@ -21,7 +20,7 @@ function SignIn() {
     <div className="container-center">
       <div className="login">
         <div className="login-area">
-          <img src={logo} alt="sistema logo" />
+          <img className="logomg" src={logo} alt="sistema logo" />
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -42,8 +41,6 @@ function SignIn() {
             {loadingAuth ? "Carregando..." : "Acessar"}
           </button>
         </form>
-
-        <Link to="/register">Criar uma conta!</Link>
       </div>
     </div>
   );
