@@ -3,7 +3,7 @@ import "./dashboard.css";
 
 import Header from "../../components/Header";
 import Title from "../../components/Title";
-import { FiEdit2, FiPlus, FiSearch } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiTrash, FiImage } from "react-icons/fi";
 import { FaRunning } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
@@ -124,11 +124,15 @@ export default function Dashboard() {
                       <td data-label="Nome">{item.name}</td>
                       <td data-label="Series">{item.series}</td>
                       <td data-label="Imagem">
-                        <img
-                          src={item.image}
-                          alt="img exercicio"
-                          sizes="45x45"
-                        />
+                        {item.image === "" ? (
+                          <FiImage color="#000" size={45} />
+                        ) : (
+                          <img
+                            src={item.image}
+                            alt="img exercicio"
+                            sizes="45x45"
+                          />
+                        )}
                       </td>
                       <td data-label="#">
                         <button
@@ -136,7 +140,7 @@ export default function Dashboard() {
                           style={{ backgroundColor: "red" }}
                           onClick={() => handleDelete(item)}
                         >
-                          <FiSearch color="#fff" size={17} />
+                          <FiTrash color="#fff" size={17} />
                         </button>
                         <Link
                           className="action"

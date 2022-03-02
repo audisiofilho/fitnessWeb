@@ -1,11 +1,10 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import firebase from "../../services/firebaseConnection";
 import { useHistory, useParams } from "react-router-dom";
 
-import { FiPlusCircle } from "react-icons/fi";
+import { FiPlusCircle, FiUpload } from "react-icons/fi";
 import Header from "../../components/Header";
 import Title from "../../components/Title";
-import { AuthContext } from "../../contexts/auth";
 
 import "./new.css";
 import { toast } from "react-toastify";
@@ -14,127 +13,130 @@ export default function New() {
   const { id } = useParams();
   const history = useHistory();
 
-  const [customers, setCustomers] = useState([]);
-  const [loadCustomers, setLoadCustomers] = useState(true);
-  const [customerSelected, setCustomerSelected] = useState(0);
-
-  const [assunto, setAssunto] = useState("Suporte");
-  const [status, setStatus] = useState("Aberto");
-  const [complemento, setComplemento] = useState("");
-
+  const [exercicio, setExercicio] = useState("");
+  const [series, setSeries] = useState("");
   const [idCustomer, setIdCustomer] = useState(false);
-
-  const { user } = useContext(AuthContext);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [imageAvatar, setImageAvatar] = useState(null);
 
   useEffect(() => {
-    async function loadCustomers() {
-      await firebase
-        .firestore()
-        .collection("customers")
-        .get()
-        .then((snapshot) => {
-          let lista = [];
+    async function loadId() {
+      if (id) {
+        await firebase
+          .firestore()
+          .collection(" exercises")
+          .doc(id)
+          .get()
+          .then((snapshot) => {
+            setExercicio(snapshot.data().name);
+            setSeries(snapshot.data().series);
+            setAvatarUrl(snapshot.data().image);
 
-          snapshot.forEach((doc) => {
-            lista.push({
-              id: doc.id,
-              nomeFantasia: doc.data().nomeFantasia,
-            });
+            setIdCustomer(true);
+          })
+          .catch((err) => {
+            console.log("ERRO NO ID PASSADO: ", err);
+            setIdCustomer(false);
           });
-
-          if (lista.length === 0) {
-            console.log("NENHUMA EMPRESA ENCONTRADA");
-            setCustomers([{ id: "1", nomeFantasia: "" }]);
-            setLoadCustomers(false);
-            return;
-          }
-
-          setCustomers(lista);
-          setLoadCustomers(false);
-
-          if (id) {
-            loadId(lista);
-          }
-        })
-        .catch((error) => {
-          console.log("deu algum erro!", error);
-          setLoadCustomers(false);
-          setCustomers([{ id: "1", nomeFantasia: "" }]);
-        });
+      }
     }
-
-    loadCustomers();
+    loadId();
   }, [id]);
 
-  async function loadId(lista) {
-    await firebase
-      .firestore()
-      .collection("chamados")
-      .doc(id)
-      .get()
-      .then((snapshot) => {
-        setAssunto(snapshot.data().assunto);
-        setStatus(snapshot.data().status);
-        setComplemento(snapshot.data().complemento);
+  function handleFile(e) {
+    if (e.target.files[0]) {
+      const image = e.target.files[0];
 
-        let index = lista.findIndex(
-          (item) => item.id === snapshot.data().clienteId
-        );
-        setCustomerSelected(index);
-        setIdCustomer(true);
-      })
-      .catch((err) => {
-        console.log("ERRO NO ID PASSADO: ", err);
-        setIdCustomer(false);
-      });
+      if (image.type === "image/jpeg" || image.type === "image/png") {
+        setImageAvatar(image);
+        setAvatarUrl(URL.createObjectURL(e.target.files[0]));
+      } else {
+        alert("Envie uma imagem do tipo JPEG ou PNG");
+        setImageAvatar(null);
+        return null;
+      }
+    }
   }
 
-  async function handleRegister(e) {
-    e.preventDefault();
-
+  async function handleUpload(e) {
     if (idCustomer) {
-      await firebase
-        .firestore()
-        .collection("chamados")
-        .doc(id)
-        .update({
-          cliente: customers[customerSelected].nomeFantasia,
-          clienteId: customers[customerSelected].id,
-          assunto: assunto,
-          status: status,
-          complemento: complemento,
-          userId: user.uid,
-        })
-        .then(() => {
-          toast.success("Chamado editado com sucesso!");
-          setCustomerSelected(0);
-          setComplemento("");
-          history.push("/dashboard");
+      const uploadTask = await firebase
+        .storage()
+        .ref(`images/${id}/${imageAvatar.name}`)
+        .put(imageAvatar)
+        .then(async () => {
+          console.log("foto enviada com sucesso");
+
+          await firebase
+            .storage()
+            .ref(`images/${id}`)
+            .child(imageAvatar.name)
+            .getDownloadURL()
+            .then(async (url) => {
+              let urlFoto = url;
+
+              await firebase
+                .firestore()
+                .collection(" exercises")
+                .doc(id)
+                .update({
+                  image: urlFoto,
+                  name: exercicio,
+                  series: series,
+                });
+
+              toast.success("Exercicio editado com sucesso!");
+              history.push("/dashboard");
+            });
         })
         .catch((err) => {
           toast.error("OPS! Erro ao editar, tente mais tarde.");
           console.log(err);
         });
-
-        return;
     }
+  }
+
+  async function handleSave(e) {
+    e.preventDefault();
+
+    if (id) {
+      if (imageAvatar === null && (exercicio !== "" || series !== "")) {
+        await firebase
+          .firestore()
+          .collection(" exercises")
+          .doc(id)
+          .update({
+            name: exercicio,
+            series: series,
+          })
+          .then(() => {
+            toast.success("Exercicio editado com sucesso!");
+            history.push("/dashboard");
+          })
+          .catch((err) => {
+            toast.error("OPS! Erro ao editar, tente mais tarde.");
+            console.log(err);
+          });
+      } else if (exercicio !== "" && imageAvatar !== null) {
+        handleUpload();
+      }
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
 
     await firebase
       .firestore()
-      .collection("chamados")
+      .collection(" exercises")
       .add({
-        created: new Date(),
-        cliente: customers[customerSelected].nomeFantasia,
-        clienteId: customers[customerSelected].id,
-        assunto: assunto,
-        status: status,
-        complemento: complemento,
-        userId: user.uid,
+        name: exercicio,
+        series: series,
+        image: "",
       })
       .then(() => {
-        toast.success("Chamado criado com sucesso!");
-        setComplemento("");
-        setCustomerSelected(0);
+        toast.success("Exercicio criado com sucesso!");
+        history.push("/dashboard");
       })
       .catch((error) => {
         toast.error("Ops! Erro ao registrar! Tente mais tarde!");
@@ -142,98 +144,79 @@ export default function New() {
       });
   }
 
-  //Troca Assunto
-  function handleChangeSelect(e) {
-    setAssunto(e.target.value);
-  }
-
-  //Troca Chamado
-  function handleOptionChange(e) {
-    setStatus(e.target.value);
-  }
-
-  //Troca Cliente
-  function handleChangeCustomers(e) {
-    setCustomerSelected(e.target.value);
-  }
-
   return (
     <div>
       <Header />
       <div className="content">
-        <Title name="Novo chamado">
-          <FiPlusCircle size={25} />
-        </Title>
+        {id ? (
+          <Title name="Editar Exercicio">
+            <FiPlusCircle size={25} />
+          </Title>
+        ) : (
+          <Title name="Novo Exercicio">
+            <FiPlusCircle size={25} />
+          </Title>
+        )}
 
         <div className="contaier">
-          <form className="form-profile" onSubmit={handleRegister}>
-            <label>Cliente</label>
+          {id ? (
+            <form className="form-profile" onSubmit={handleSave}>
+              <label>Exercicio</label>
 
-            {loadCustomers ? (
               <input
                 type="text"
-                disabled={true}
-                value="Carregando clientes..."
+                value={exercicio}
+                onChange={(e) => setExercicio(e.target.value)}
               />
-            ) : (
-              <select value={customerSelected} onChange={handleChangeCustomers}>
-                {customers.map((item, index) => {
-                  return (
-                    <option key={item.id} value={index}>
-                      {item.nomeFantasia}
-                    </option>
-                  );
-                })}
-              </select>
-            )}
-
-            <label>Assunto</label>
-            <select value={assunto} onChange={handleChangeSelect}>
-              <option value="Suporte">Suporte</option>
-              <option value="Visita Tecnica">Visita Tecnica</option>
-              <option value="Financeiro">Financeiro</option>
-            </select>
-
-            <label>Status</label>
-            <div className="status">
-              <input
-                type="radio"
-                name="radio"
-                value="Aberto"
-                onChange={handleOptionChange}
-                checked={status === "Aberto"}
-              />
-              <span>Em Aberto</span>
+              <label>Series</label>
 
               <input
-                type="radio"
-                name="radio"
-                value="Progresso"
-                onChange={handleOptionChange}
-                checked={status === "Progresso"}
+                type="text"
+                value={series}
+                onChange={(e) => setSeries(e.target.value)}
               />
-              <span>Progresso</span>
+
+              <label className="label-avatar">
+                <span>
+                  <FiUpload color="#000" size={50} />
+                </span>
+                <input type="file" accept="image/*" onChange={handleFile} />
+                <br />
+
+                {avatarUrl === "" ? (
+                  <div></div>
+                ) : (
+                  <img
+                    src={avatarUrl}
+                    width="250"
+                    height="250"
+                    alt="Foto de perfil de usuario"
+                  />
+                )}
+              </label>
+
+              <button type="submit">Editar</button>
+            </form>
+          ) : (
+            <form className="form-profile" onSubmit={handleRegister}>
+              <label>Exercicio</label>
 
               <input
-                type="radio"
-                name="radio"
-                value="Atendido"
-                onChange={handleOptionChange}
-                checked={status === "Atendido"}
+                type="text"
+                value={exercicio}
+                onChange={(e) => setExercicio(e.target.value)}
               />
-              <span>Atendido</span>
-            </div>
+              <label>Series</label>
 
-            <label>Complemento</label>
-            <textarea
-              type="text"
-              placeholder="Descreva seu problema (opcional)."
-              value={complemento}
-              onChange={(e) => setComplemento(e.target.value)}
-            ></textarea>
+              <input
+                type="text"
+                value={series}
+                onChange={(e) => setSeries(e.target.value)}
+              />
 
-            <button type="submit">Registrar</button>
-          </form>
+              <button type="submit">Registrar</button>
+            </form>
+          )}
         </div>
       </div>
     </div>
