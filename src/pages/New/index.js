@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import firebase from "../../services/firebaseConnection";
 import { useHistory, useParams } from "react-router-dom";
 
-import { FiPlusCircle, FiUpload } from "react-icons/fi";
+import { FiPlusCircle, FiUpload, FiEdit2 } from "react-icons/fi";
 import Header from "../../components/Header";
 import Title from "../../components/Title";
 
 import "./new.css";
 import { toast } from "react-toastify";
+import { Link } from "react-router-dom";
 
 export default function New() {
   const { id } = useParams();
@@ -18,6 +19,7 @@ export default function New() {
   const [idCustomer, setIdCustomer] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [imageAvatar, setImageAvatar] = useState(null);
+  const [treino, setTreino] = useState("Peito");
 
   useEffect(() => {
     async function loadId() {
@@ -31,6 +33,7 @@ export default function New() {
             setExercicio(snapshot.data().name);
             setSeries(snapshot.data().series);
             setAvatarUrl(snapshot.data().image);
+            setTreino(snapshot.data().treino);
 
             setIdCustomer(true);
           })
@@ -83,6 +86,7 @@ export default function New() {
                   image: urlFoto,
                   name: exercicio,
                   series: series,
+                  treino: treino,
                 });
 
               toast.success("Exercicio editado com sucesso!");
@@ -108,6 +112,7 @@ export default function New() {
           .update({
             name: exercicio,
             series: series,
+            treino: treino,
           })
           .then(() => {
             toast.success("Exercicio editado com sucesso!");
@@ -132,6 +137,7 @@ export default function New() {
       .add({
         name: exercicio,
         series: series,
+        treino: treino,
         image: "",
       })
       .then(() => {
@@ -150,7 +156,7 @@ export default function New() {
       <div className="content">
         {id ? (
           <Title name="Editar Exercicio">
-            <FiPlusCircle size={25} />
+            <FiEdit2 size={25} />
           </Title>
         ) : (
           <Title name="Novo Exercicio">
@@ -159,23 +165,31 @@ export default function New() {
         )}
 
         <div className="contaier">
-          {id ? (
-            <form className="form-profile" onSubmit={handleSave}>
-              <label>Exercicio</label>
+          <form className="form-profile" onSubmit={ id ? handleSave : handleRegister}>
+            <label>Exercicio</label>
+            <input
+              type="text"
+              value={exercicio}
+              onChange={(e) => setExercicio(e.target.value)}
+            />
 
-              <input
-                type="text"
-                value={exercicio}
-                onChange={(e) => setExercicio(e.target.value)}
-              />
-              <label>Series</label>
+            <label>Series</label>
+            <input
+              type="text"
+              value={series}
+              onChange={(e) => setSeries(e.target.value)}
+            />
 
-              <input
-                type="text"
-                value={series}
-                onChange={(e) => setSeries(e.target.value)}
-              />
+            <label>Treino</label>
+            <select value={treino} onChange={(e) => setTreino(e.target.value)}>
+              <option value="Peito">Peito</option>
+              <option value="Costas">Costas</option>
+              <option value="Pernas">Pernas</option>
+              <option value="Abdominal">Abdominal</option>
+              <option value="Funcional">Funcional</option>
+            </select>
 
+            {id ? (
               <label className="label-avatar">
                 <span>
                   <FiUpload color="#000" size={50} />
@@ -194,29 +208,11 @@ export default function New() {
                   />
                 )}
               </label>
-
-              <button type="submit">Editar</button>
-            </form>
-          ) : (
-            <form className="form-profile" onSubmit={handleRegister}>
-              <label>Exercicio</label>
-
-              <input
-                type="text"
-                value={exercicio}
-                onChange={(e) => setExercicio(e.target.value)}
-              />
-              <label>Series</label>
-
-              <input
-                type="text"
-                value={series}
-                onChange={(e) => setSeries(e.target.value)}
-              />
-
-              <button type="submit">Registrar</button>
-            </form>
-          )}
+            ) : (
+              <div></div>
+            )}
+            <button type="submit">{id ? "Editar" : "Registrar"}</button>
+          </form>
         </div>
       </div>
     </div>

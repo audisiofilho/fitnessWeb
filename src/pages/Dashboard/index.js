@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useHistory, useParams } from "react-router-dom";
 import "./dashboard.css";
 
 import Header from "../../components/Header";
@@ -10,31 +11,54 @@ import { Link } from "react-router-dom";
 import firebase from "../../services/firebaseConnection";
 import { toast } from "react-toastify";
 
-const listRef = firebase.firestore().collection(" exercises");
-
 export default function Dashboard() {
+  const { fit } = useParams();
+  const history = useHistory();
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
+  const [listRef, setListRef] = useState(
+    firebase.firestore().collection(" exercises")
+  );
+
+  //const listRef = firebase.firestore().collection(" exercises");
 
   useEffect(() => {
+    console.log(fit);
     async function loadExercices() {
-      await listRef
-        .get()
-        .then((snapshot) => {
-          updateState(snapshot);
-        })
-        .catch((err) => {
-          console.log(err);
-        });
+      if (!fit || fit === "Todos") {
+        await listRef
+          .get()
+          .then((snapshot) => {
+            updateState(snapshot);
+          })
+          .catch((err) => {
+            console.log(err);
+          });
 
-      setLoading(false);
+        setLoading(false);
+      } else {
+        const sql = firebase
+          .firestore()
+          .collection(" exercises")
+          .where("treino", "==", fit);
+        await sql
+          .get()
+          .then((snapshot) => {
+            updateState(snapshot);
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+
+        setListRef(sql);
+        setLoading(false);
+      }
     }
-
     loadExercices();
 
     return () => {};
-  }, []);
+  }, [fit]);
 
   async function updateState(snapshot) {
     const isCollectionEmpty = snapshot.size === 0;
@@ -48,6 +72,7 @@ export default function Dashboard() {
           name: doc.data().name,
           image: doc.data().image,
           series: doc.data().series,
+          treino: doc.data().treino,
         });
       });
 
@@ -86,6 +111,12 @@ export default function Dashboard() {
       });
   }
 
+  function handleTreino(e) {
+    const treino = e.target.value;
+    
+    window.location.replace(`/dashboard/${treino}`);
+  }
+
   return (
     <div>
       <Header />
@@ -101,6 +132,14 @@ export default function Dashboard() {
               <FiPlus size={25} color="#fff" />
               Novo Exercicio
             </Link>
+            <select value={fit} onChange={handleTreino}>
+              <option value="Todos">Todos</option>
+              <option value="Peito">Peito</option>
+              <option value="Costas">Costas</option>
+              <option value="Pernas">Pernas</option>
+              <option value="Abdominal">Abdominal</option>
+              <option value="Funcional">Funcional</option>
+            </select>
           </div>
         ) : (
           <>
@@ -108,11 +147,20 @@ export default function Dashboard() {
               <FiPlus size={25} color="#fff" />
               Novo Exercicio
             </Link>
+            <select value={fit} onChange={handleTreino}>
+              <option value="Todos">Todos</option>
+              <option value="Peito">Peito</option>
+              <option value="Costas">Costas</option>
+              <option value="Pernas">Pernas</option>
+              <option value="Abdominal">Abdominal</option>
+              <option value="Funcional">Funcional</option>
+            </select>
             <table>
               <thead>
                 <tr>
                   <th scope="col">Nome</th>
                   <th scope="col">Series</th>
+                  <th scope="col">Treino</th>
                   <th scope="col">Imagem</th>
                   <th scope="col">#</th>
                 </tr>
@@ -123,6 +171,7 @@ export default function Dashboard() {
                     <tr key={index}>
                       <td data-label="Nome">{item.name}</td>
                       <td data-label="Series">{item.series}</td>
+                      <td data-label="Treino">{item.treino}</td>
                       <td data-label="Imagem">
                         {item.image === "" ? (
                           <FiImage color="#000" size={45} />
