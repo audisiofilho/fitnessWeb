@@ -23,14 +23,7 @@ export default function Header() {
         <h1>fitnessWeb</h1>
       </div>
 
-      {fit === "Todos" || !fit ? (
-        <></>
-      ) : (
-        <Link to="/dashboard/Todos">
-          <GiMuscleUp color="#fff" size={24} />
-          Exercicios
-        </Link>
-      )}
+      
 
       <Link onClick={() => signOut()}>
         <FiPower color="#fff" size={24} />
