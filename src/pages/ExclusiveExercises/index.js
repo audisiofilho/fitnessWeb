@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useHistory, useParams } from "react-router-dom";
 import "./dashboard.css";
 
 import Header from "../../components/Header";
@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 
 export default function Dashboard() {
   const { fit } = useParams();
+  const history = useHistory();
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
@@ -20,7 +21,10 @@ export default function Dashboard() {
     firebase.firestore().collection(" exercises")
   );
 
+  //const listRef = firebase.firestore().collection(" exercises");
+
   useEffect(() => {
+    console.log(fit);
     async function loadExercices() {
       if (!fit || fit === "Todos") {
         await listRef
